@@ -16,48 +16,39 @@ export async function POST(request: Request) {
 
     const supabase = await createClient();
 
-    // 1. Sign up user in Supabase Auth
+    // 1. Sign up user in Supabase Auth with metadata for database trigger
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          role,
+          full_name: fullName || email.split('@')[0],
+          company_name: companyName || email.split('@')[0],
+          linkedin_url: linkedinUrl || null,
+          website_url: websiteUrl || null,
+          skills: skills || null,
+          education: education || null,
+          experience: experience || null,
+        },
+      },
     });
 
-    if (authError || !authData.user) {
-      return NextResponse.json({ error: authError?.message || 'Failed to sign up' }, { status: 400 });
+    if (authError) {
+      return NextResponse.json({ error: authError.message }, { status: 400 });
+    }
+
+    if (!authData.user) {
+      return NextResponse.json({ error: 'Failed to create user account' }, { status: 400 });
     }
 
     const userId = authData.user.id;
 
-    // 2. Insert into appropriate database table
-    if (role === 'company') {
-      const { error: companyError } = await supabase.from('companies').insert({
-        id: userId,
-        company_name: companyName || email.split('@')[0],
-        email: email,
-        linkedin_url: linkedinUrl || null,
-        website_url: websiteUrl || null,
-        is_verified: false,
-      });
-
-      if (companyError) {
-        return NextResponse.json({ error: companyError.message }, { status: 400 });
-      }
-    } else {
-      // Student or Admin
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: userId,
-        role: role as 'student' | 'admin',
-        full_name: fullName || email.split('@')[0],
-        email: email,
-        skills: skills || null,
-        education: education || null,
-        experience: experience || null,
-      });
-
-      if (profileError) {
-        return NextResponse.json({ error: profileError.message }, { status: 400 });
-      }
-    }
+    // 2. Automatically log the user in to establish session cookies
+    await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
     return NextResponse.json({
       success: true,

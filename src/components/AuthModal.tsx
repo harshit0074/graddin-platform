@@ -110,13 +110,6 @@ export function AuthModal({ isOpen, onClose, defaultRole = 'student' }: AuthModa
         throw new Error(data.error || 'Failed to create account');
       }
 
-      // Auto login
-      await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
       await refreshUser();
       resetForm();
       onClose();
