@@ -76,10 +76,12 @@ export function Navbar() {
 
       <div className="max-w-7xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="h-9 w-9 rounded-xl bg-[#2C1B14] text-[#FAF7F2] flex items-center justify-center font-serif text-xl font-bold shadow-xs transition-transform group-hover:scale-105">
-            G
-          </div>
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <img 
+            src="/icon-512.png" 
+            alt="GRADDIn Logo" 
+            className="h-9 w-9 rounded-xl object-contain bg-[#110B08] p-1 border border-white/10 shadow-xs transition-transform group-hover:scale-105"
+          />
           <div className="flex flex-col">
             <span className="font-serif text-2xl font-bold tracking-tight text-[#1C140E]">
               GRADD<span className="text-[#C99A6B]">In</span>
