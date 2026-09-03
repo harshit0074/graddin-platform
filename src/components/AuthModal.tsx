@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthContext';
-import { User, Building2, ShieldCheck, Loader2, AlertCircle } from 'lucide-react';
+import { isSuperAdminEmail } from '@/lib/constants';
+import { User, Building2, ShieldCheck, Loader2, AlertCircle, Sparkles } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -170,6 +171,12 @@ export function AuthModal({ isOpen, onClose, defaultRole = 'student' }: AuthModa
                   required
                   className="bg-zinc-900 border-zinc-800 text-zinc-100 focus-visible:ring-indigo-500"
                 />
+                {isSuperAdminEmail(email) && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-purple-400 font-medium pt-0.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                    <span>⚡ Recognized Super Admin Account</span>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -246,6 +253,12 @@ export function AuthModal({ isOpen, onClose, defaultRole = 'student' }: AuthModa
                     required
                     className="bg-zinc-900 border-zinc-800 text-zinc-100"
                   />
+                  {isSuperAdminEmail(email) && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-purple-400 font-medium pt-0.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                      <span>⚡ Super Admin Account - Admin privileges will be assigned automatically</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">

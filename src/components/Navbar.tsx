@@ -4,6 +4,7 @@ import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { isSuperAdminEmail } from '@/lib/constants';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +34,8 @@ interface NavbarProps {
 
 export function Navbar({ onOpenAuth, activeView, setActiveView }: NavbarProps) {
   const { user, logout } = useAuth();
+  const isSuperAdmin = isSuperAdminEmail(user?.email);
+  const isAdmin = user ? (user.role === 'admin' || isSuperAdmin) : false;
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md">
@@ -161,7 +164,7 @@ export function Navbar({ onOpenAuth, activeView, setActiveView }: NavbarProps) {
               )}
 
               {/* ADMIN ROLE SHORTCUTS (HIDDEN / GOD MODE) */}
-              {user.role === 'admin' && (
+              {isAdmin && (
                 <Button
                   size="sm"
                   onClick={() => setActiveView('admin-dash')}
@@ -186,13 +189,19 @@ export function Navbar({ onOpenAuth, activeView, setActiveView }: NavbarProps) {
                     <div className="text-xs text-zinc-400">Signed in as</div>
                     <div className="font-semibold text-sm truncate text-zinc-100">{user.email}</div>
                     <div className="mt-1">
-                      <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-indigo-400 border border-zinc-700">
-                        {user.role}
-                      </span>
+                      {isSuperAdmin ? (
+                        <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-700/80">
+                          SUPER ADMIN
+                        </span>
+                      ) : (
+                        <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-indigo-400 border border-zinc-700">
+                          {user.role}
+                        </span>
+                      )}
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-zinc-800" />
-                  {user.role === 'student' && (
+                  {user.role === 'student' && !isAdmin && (
                     <>
                       <DropdownMenuItem onClick={() => setActiveView('student-apps')} className="cursor-pointer">
                         <FileText className="w-4 h-4 mr-2 text-zinc-400" />
@@ -210,11 +219,17 @@ export function Navbar({ onOpenAuth, activeView, setActiveView }: NavbarProps) {
                       Company Dashboard
                     </DropdownMenuItem>
                   )}
-                  {user.role === 'admin' && (
-                    <DropdownMenuItem onClick={() => setActiveView('admin-dash')} className="cursor-pointer text-purple-400">
-                      <ShieldAlert className="w-4 h-4 mr-2 text-purple-400" />
-                      Admin Control Panel
-                    </DropdownMenuItem>
+                  {isAdmin && (
+                    <>
+                      <DropdownMenuItem onClick={() => setActiveView('admin-dash')} className="cursor-pointer text-purple-400">
+                        <ShieldAlert className="w-4 h-4 mr-2 text-purple-400" />
+                        Admin Control Panel
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setActiveView('student-profile')} className="cursor-pointer text-zinc-400">
+                        <User className="w-4 h-4 mr-2 text-zinc-400" />
+                        Profile Info
+                      </DropdownMenuItem>
+                    </>
                   )}
                   <DropdownMenuSeparator className="bg-zinc-800" />
                   <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-400 hover:text-red-300">

@@ -6,8 +6,10 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { isSuperAdminEmail } from '@/lib/constants';
 import {
   ShieldAlert,
+  ShieldCheck,
   Building2,
   Users,
   Briefcase,
@@ -109,6 +111,28 @@ export function AdminPortal() {
       }
     } catch (err) {
       console.error('Delete error:', err);
+    }
+  };
+
+  const handleToggleUserRole = async (userId: string, currentRole: 'student' | 'admin') => {
+    const newRole = currentRole === 'admin' ? 'student' : 'admin';
+    setActionLoading(userId);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, role: newRole }),
+      });
+
+      if (res.ok) {
+        setUsersList((prev) =>
+          prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
+        );
+      }
+    } catch (err) {
+      console.error('Failed to change user role:', err);
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -320,28 +344,72 @@ export function AdminPortal() {
         <TabsContent value="students" className="pt-4">
           <Card className="border-zinc-800 bg-zinc-900/40 rounded-2xl overflow-hidden">
             <CardHeader className="pb-3 border-b border-zinc-800">
-              <CardTitle className="text-base font-bold text-white">Registered Student & Admin Members</CardTitle>
+              <CardTitle className="text-base font-bold text-white flex items-center justify-between">
+                <span>Registered Student & Admin Members</span>
+                <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-xs">
+                  {usersList.filter((u) => u.role === 'admin').length} Admins • {usersList.filter((u) => u.role === 'student').length} Students
+                </Badge>
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-zinc-800/80">
-                {usersList.map((u) => (
-                  <div key={u.id} className="p-4 flex items-center justify-between gap-4 text-xs">
-                    <div>
-                      <div className="font-bold text-sm text-white flex items-center gap-2">
-                        {u.full_name || 'Anonymous User'}
-                        <Badge variant="outline" className="text-[10px] uppercase">
-                          {u.role}
-                        </Badge>
+                {usersList.map((u) => {
+                  const isSuperAdmin = isSuperAdminEmail(u.email);
+                  const isAdmin = u.role === 'admin' || isSuperAdmin;
+                  return (
+                    <div key={u.id} className="p-4 flex items-center justify-between gap-4 text-xs">
+                      <div>
+                        <div className="font-bold text-sm text-white flex items-center gap-2">
+                          {u.full_name || 'Anonymous User'}
+                          {isSuperAdmin ? (
+                            <Badge className="bg-gradient-to-r from-red-500/20 to-purple-500/20 text-purple-300 border-purple-500/40 text-[10px] uppercase font-bold flex items-center gap-1">
+                              <ShieldCheck className="w-3 h-3 text-purple-400" />
+                              Super Admin
+                            </Badge>
+                          ) : isAdmin ? (
+                            <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/40 text-[10px] uppercase font-semibold">
+                              Admin
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] uppercase text-zinc-400 border-zinc-700">
+                              Student
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-zinc-400 mt-0.5">
+                          <span className="text-zinc-200 font-mono">{u.email}</span> • {u.education || 'No education provided'}
+                        </div>
+                        {u.skills && (
+                          <div className="text-zinc-500 text-[11px] mt-1">Skills: {u.skills}</div>
+                        )}
                       </div>
-                      <div className="text-zinc-400 mt-0.5">
-                        {u.email} • {u.education || 'No education provided'}
-                      </div>
-                      {u.skills && (
-                        <div className="text-zinc-500 text-[11px] mt-1">Skills: {u.skills}</div>
+
+                      {!isSuperAdmin && (
+                        <div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={actionLoading === u.id}
+                            onClick={() => handleToggleUserRole(u.id, u.role)}
+                            className={`text-xs h-8 ${
+                              u.role === 'admin'
+                                ? 'text-zinc-400 hover:text-zinc-200 border-zinc-750'
+                                : 'text-purple-400 hover:text-purple-300 border-purple-800/50 hover:bg-purple-950/30'
+                            }`}
+                          >
+                            {actionLoading === u.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : u.role === 'admin' ? (
+                              'Revoke Admin'
+                            ) : (
+                              'Make Admin'
+                            )}
+                          </Button>
+                        </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

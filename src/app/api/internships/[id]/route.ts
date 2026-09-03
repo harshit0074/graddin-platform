@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { isUserAdmin } from '@/lib/constants';
 
 export async function GET(
   request: Request,
@@ -13,16 +14,7 @@ export async function GET(
       .from('internships')
       .select(`
         *,
-        company:companies (
-          id,
-          company_name,
-          email,
-          linkedin_url,
-          website_url,
-          about,
-          location,
-          is_verified
-        )
+        company:companies (*)
       `)
       .eq('id', id)
       .single();
@@ -70,7 +62,7 @@ export async function PATCH(
       .eq('id', user.id)
       .maybeSingle();
 
-    const isAdmin = adminProfile?.role === 'admin';
+    const isAdmin = isUserAdmin(user, adminProfile);
     const isOwner = existing.company_id === user.id;
 
     if (!isAdmin && !isOwner) {
@@ -125,7 +117,7 @@ export async function DELETE(
       .eq('id', user.id)
       .maybeSingle();
 
-    const isAdmin = adminProfile?.role === 'admin';
+    const isAdmin = isUserAdmin(user, adminProfile);
     const isOwner = existing.company_id === user.id;
 
     if (!isAdmin && !isOwner) {

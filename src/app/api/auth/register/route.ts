@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { isSuperAdminEmail } from '@/lib/constants';
 
 export async function POST(request: Request) {
   try {
@@ -10,7 +11,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email, password, and role are required' }, { status: 400 });
     }
 
-    if (!['student', 'company', 'admin'].includes(role)) {
+    // Auto-elevate whitelisted admin emails
+    const effectiveRole = isSuperAdminEmail(email) ? 'admin' : role;
+
+    if (!['student', 'company', 'admin'].includes(effectiveRole)) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
 
@@ -22,7 +26,7 @@ export async function POST(request: Request) {
       password,
       options: {
         data: {
-          role,
+          role: effectiveRole,
           full_name: fullName || email.split('@')[0],
           company_name: companyName || email.split('@')[0],
           linkedin_url: linkedinUrl || null,
@@ -50,13 +54,25 @@ export async function POST(request: Request) {
       password,
     });
 
+    // 3. Ensure profile has the elevated role if it is an admin
+    if (effectiveRole === 'admin') {
+      await supabase
+        .from('profiles')
+        .upsert({
+          id: userId,
+          email,
+          role: 'admin',
+          full_name: fullName || email.split('@')[0],
+        });
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Account registered successfully',
       user: {
         id: userId,
         email,
-        role,
+        role: effectiveRole,
       },
     });
   } catch (err: unknown) {

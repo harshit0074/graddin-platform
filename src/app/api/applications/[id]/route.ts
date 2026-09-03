@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { isUserAdmin } from '@/lib/constants';
 
 export async function PATCH(
   request: Request,
@@ -33,7 +34,7 @@ export async function PATCH(
     }
 
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-    const isAdmin = profile?.role === 'admin';
+    const isAdmin = isUserAdmin(user, profile);
     const isCompanyOwner = app.internship?.company_id === user.id;
 
     if (!isAdmin && !isCompanyOwner) {

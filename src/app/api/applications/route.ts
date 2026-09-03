@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { calculateCandidateMatch } from '@/lib/ai-matcher';
+import { isUserAdmin } from '@/lib/constants';
 
 export async function GET(request: Request) {
   try {
@@ -17,6 +18,27 @@ export async function GET(request: Request) {
     // Check user role
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
     const { data: company } = await supabase.from('companies').select('id').eq('id', user.id).maybeSingle();
+
+    if (isUserAdmin(user, profile)) {
+      // Admin god mode
+      const { data: applications, error } = await supabase
+        .from('applications')
+        .select(`
+          *,
+          student:profiles (*),
+          internship:internships (
+            *,
+            company:companies (*)
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+
+      return NextResponse.json({ applications: applications || [] });
+    }
 
     if (profile?.role === 'student') {
       // Return student's applications
@@ -83,27 +105,6 @@ export async function GET(request: Request) {
       );
 
       return NextResponse.json({ applications: companyApps });
-    }
-
-    if (profile?.role === 'admin') {
-      // Admin god mode
-      const { data: applications, error } = await supabase
-        .from('applications')
-        .select(`
-          *,
-          student:profiles (*),
-          internship:internships (
-            *,
-            company:companies (*)
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
-      }
-
-      return NextResponse.json({ applications: applications || [] });
     }
 
     return NextResponse.json({ applications: [] });
