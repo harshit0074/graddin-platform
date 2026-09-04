@@ -1,357 +1,368 @@
-"use client";
+'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext';
-import { InternshipCard } from '@/components/InternshipCard';
-import { ApplyModal } from '@/components/ApplyModal';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Internship } from '@/lib/types';
+import { useAuth } from '@/context/AuthContext';
+import { Navbar } from '@/components/Navbar';
+import { AuthModal } from '@/components/AuthModal';
+import { ApplyModal } from '@/components/ApplyModal';
+import { InternshipCard } from '@/components/InternshipCard';
+import { StudentDashboard } from '@/components/StudentDashboard';
+import { CompanyDashboard } from '@/components/CompanyDashboard';
+import { AdminPortal } from '@/components/AdminPortal';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { 
-  ArrowUpRight, 
-  Sparkles, 
-  ShieldCheck, 
-  GraduationCap, 
-  Building2, 
-  ArrowRight,
+import { Badge } from '@/components/ui/badge';
+import {
+  Search,
+  MapPin,
+  Briefcase,
+  Sparkles,
+  Building2,
+  GraduationCap,
+  ShieldCheck,
   TrendingUp,
-  CheckCircle2
+  HelpCircle,
+  CheckCircle,
+  Loader2,
+  ArrowRight,
 } from 'lucide-react';
 
-export default function LandingPage() {
-  const { internships, switchRole } = useAuth();
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [activeApplyingInternship, setActiveApplyingInternship] = useState<Internship | null>(null);
+export default function Home() {
+  const { user } = useAuth();
+  const [activeView, setActiveView] = useState<
+    'feed' | 'student-apps' | 'student-profile' | 'company-dash' | 'admin-dash' | 'faq' | 'about'
+  >('feed');
 
-  const categories = ["All", "Engineering", "Design", "AI & ML", "Robotics", "Systems"];
+  // Auth Modal State
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authDefaultRole, setAuthDefaultRole] = useState<'student' | 'company'>('student');
 
-  const filteredInternships = internships.filter(i => {
-    if (selectedCategory === "All") return true;
-    if (selectedCategory === "Engineering") return i.department?.toLowerCase().includes("engineering") || i.title.toLowerCase().includes("engineer");
-    if (selectedCategory === "Design") return i.department?.toLowerCase().includes("design") || i.skills?.includes("Figma");
-    if (selectedCategory === "AI & ML") return i.department?.toLowerCase().includes("ai") || i.skills?.includes("Python");
-    if (selectedCategory === "Robotics") return i.department?.toLowerCase().includes("robotics") || i.skills?.includes("ROS2");
-    if (selectedCategory === "Systems") return i.skills?.includes("Rust") || i.skills?.includes("Systems Programming");
-    return true;
-  });
+  // Apply Modal State
+  const [selectedInternshipToApply, setSelectedInternshipToApply] = useState<Internship | null>(null);
+  const [isApplyOpen, setIsApplyOpen] = useState(false);
+
+  // Feed State
+  const [internships, setInternships] = useState<Internship[]>([]);
+  const [loadingFeed, setLoadingFeed] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [roleTypeFilter, setRoleTypeFilter] = useState('');
+
+  // Applied IDs
+  const [appliedIds, setAppliedIds] = useState<string[]>([]);
+
+  const fetchFeed = useCallback(async () => {
+    setLoadingFeed(true);
+    try {
+      const params = new URLSearchParams();
+      if (searchQuery) params.append('search', searchQuery);
+      if (locationFilter) params.append('location', locationFilter);
+      if (roleTypeFilter) params.append('role_type', roleTypeFilter);
+
+      const res = await fetch(`/api/internships?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setInternships(data.internships || []);
+      }
+    } catch (err) {
+      console.error('Error fetching feed:', err);
+    } finally {
+      setLoadingFeed(false);
+    }
+  }, [searchQuery, locationFilter, roleTypeFilter]);
+
+  const fetchStudentApplications = async () => {
+    if (user?.role !== 'student') return;
+    try {
+      const res = await fetch('/api/applications');
+      if (res.ok) {
+        const data = await res.json();
+        const ids = (data.applications || []).map((a: { internship_id: string }) => a.internship_id);
+        setAppliedIds(ids);
+      }
+    } catch (err) {
+      console.error('Failed to fetch applied list:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchFeed();
+  }, [fetchFeed]);
+
+  useEffect(() => {
+    if (user?.role === 'student') {
+      fetchStudentApplications();
+    }
+  }, [user?.role]);
+
+  const handleOpenAuth = (role: 'student' | 'company' = 'student') => {
+    setAuthDefaultRole(role);
+    setIsAuthOpen(true);
+  };
+
+  const handleApplyClick = (internship: Internship) => {
+    if (!user) {
+      handleOpenAuth('student');
+      return;
+    }
+    if (user.role !== 'student') {
+      alert('Only student accounts can apply for internships. Please sign in as a student.');
+      return;
+    }
+    setSelectedInternshipToApply(internship);
+    setIsApplyOpen(true);
+  };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* HERO SECTION */}
-      <section className="relative overflow-hidden pt-16 pb-20 md:pt-24 md:pb-28 border-b border-[#E8DFD3] bg-gradient-to-b from-[#FAF7F2] via-[#FAF7F2] to-[#F5EFEB]/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          {/* Small Pill */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#EADBCE]/60 border border-[#DFD5C6] text-xs font-semibold text-[#2C1B14] mb-8 animate-in fade-in duration-500">
-            <span className="h-2 w-2 rounded-full bg-[#2C1B14]" />
-            <span>Built for students. Trusted by startups.</span>
-          </div>
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+      {/* NAVBAR */}
+      <Navbar
+        onOpenAuth={handleOpenAuth}
+        activeView={activeView}
+        setActiveView={setActiveView}
+      />
 
-          {/* Large Editorial Headline */}
-          <h1 className="font-serif text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-[#1C140E] max-w-5xl mx-auto leading-[1.08] mb-6">
-            Internships that <span className="italic font-serif font-normal text-[#2C1B14] underline decoration-[#C99A6B]/50 underline-offset-8">launch</span> your career.
-          </h1>
+      {/* MAIN VIEW CONTENT */}
+      <main className="flex-1">
+        {activeView === 'student-apps' && <StudentDashboard initialTab="applications" />}
+        {activeView === 'student-profile' && <StudentDashboard initialTab="profile" />}
+        {activeView === 'company-dash' && <CompanyDashboard />}
+        {activeView === 'admin-dash' && <AdminPortal />}
 
-          {/* Supporting Copy */}
-          <p className="text-lg sm:text-xl text-[#72635A] max-w-2xl mx-auto font-normal leading-relaxed mb-12">
-            GRADDIn connects ambitious students with meaningful internship opportunities at the startups building what comes next.
-          </p>
+        {/* FEED / EXPLORE VIEW */}
+        {activeView === 'feed' && (
+          <div className="space-y-12 pb-20">
+            {/* HERO SECTION */}
+            <section className="relative overflow-hidden pt-12 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center space-y-6">
+              {/* Glowing decorative backdrop */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[300px] bg-gradient-to-tr from-indigo-600/20 via-purple-600/20 to-pink-600/10 blur-[100px] pointer-events-none -z-10 rounded-full" />
 
-          {/* Dual Role Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto text-left">
-            {/* Student Card */}
-            <Link 
-              href="/signup?role=student"
-              onClick={() => switchRole('student')}
-              className="group relative overflow-hidden rounded-3xl bg-[#2C1B14] text-[#FAF7F2] p-8 sm:p-10 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
-            >
-              <div className="flex flex-col justify-between h-full space-y-8">
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-[#C99A6B]">
-                    FOR STUDENTS
-                  </span>
-                  <div className="flex items-center justify-between mt-2">
-                    <h2 className="font-serif text-3xl sm:text-4xl font-bold text-white tracking-tight">
-                      Join as a Student
-                    </h2>
-                    <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white transition-transform group-hover:scale-110 group-hover:bg-[#C99A6B] group-hover:text-[#1C140E]">
-                      <ArrowUpRight className="h-5 w-5" />
-                    </div>
-                  </div>
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 shadow-inner">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+                <span>Next-Gen Internship Discovery & AI Candidate Ranking</span>
+              </div>
+
+              <h1 className="text-4xl sm:text-6xl font-black tracking-tight max-w-4xl mx-auto leading-tight sm:leading-none text-white">
+                Launch Your Career With{' '}
+                <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  High-Impact Internships
+                </span>
+              </h1>
+
+              <p className="text-zinc-400 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+                GRADDIN connects verified tech and business leaders with exceptional student talent. Zero noise, sole focus on internships.
+              </p>
+
+              {/* SEARCH & FILTER BAR */}
+              <div className="max-w-3xl mx-auto bg-zinc-900/90 border border-zinc-800 p-2 sm:p-2.5 rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col sm:flex-row items-center gap-2">
+                <div className="relative flex-1 w-full">
+                  <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Input
+                    type="text"
+                    placeholder="Search by role, company, or tech stack (e.g. React, Python)..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 bg-zinc-950/60 border-zinc-800 text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-500 rounded-xl focus-visible:ring-indigo-500"
+                  />
                 </div>
 
-                <p className="text-sm text-[#EADBCE]/80 leading-relaxed">
-                  Discover internships built for your next step. Get automated AI match scores and connect directly with founding teams.
-                </p>
-              </div>
-            </Link>
-
-            {/* Company Card */}
-            <Link 
-              href="/signup?role=company"
-              onClick={() => switchRole('company')}
-              className="group relative overflow-hidden rounded-3xl bg-[#FFFFFF] border-2 border-[#DFD5C6] text-[#1C140E] p-8 sm:p-10 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#2C1B14]"
-            >
-              <div className="flex flex-col justify-between h-full space-y-8">
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-[#72635A]">
-                    FOR STARTUPS
-                  </span>
-                  <div className="flex items-center justify-between mt-2">
-                    <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#1C140E] tracking-tight">
-                      Join as a Startup
-                    </h2>
-                    <div className="h-10 w-10 rounded-full bg-[#FAF7F2] border border-[#DFD5C6] flex items-center justify-center text-[#2C1B14] transition-transform group-hover:scale-110 group-hover:bg-[#2C1B14] group-hover:text-white">
-                      <ArrowUpRight className="h-5 w-5" />
-                    </div>
-                  </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Input
+                    type="text"
+                    placeholder="Location (e.g. Remote)"
+                    value={locationFilter}
+                    onChange={(e) => setLocationFilter(e.target.value)}
+                    className="w-full sm:w-36 bg-zinc-950/60 border-zinc-800 text-xs text-zinc-100 rounded-xl focus-visible:ring-indigo-500"
+                  />
+                  <Button
+                    onClick={fetchFeed}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-4 rounded-xl shadow-md shadow-indigo-600/30"
+                  >
+                    Filter
+                  </Button>
                 </div>
+              </div>
 
-                <p className="text-sm text-[#72635A] leading-relaxed">
-                  Find motivated students ready to build with your team. Review AI-ranked candidate flashcards with zero ATS complexity.
+              {/* STATS QUICK BAR */}
+              <div className="pt-4 flex flex-wrap items-center justify-center gap-6 sm:gap-12 text-xs text-zinc-400">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-400" />
+                  <span>100% Verified Companies</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-indigo-400" />
+                  <span>Instant AI Candidate Scoring</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-purple-400" />
+                  <span>Zero File Upload Clutter</span>
+                </div>
+              </div>
+            </section>
+
+            {/* INTERNSHIPS FEED SECTION */}
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-indigo-400" />
+                  <h2 className="text-xl font-bold text-white tracking-tight">
+                    Trending Internship Openings
+                  </h2>
+                </div>
+                <Badge variant="outline" className="border-zinc-800 text-zinc-400 text-xs">
+                  {internships.length} Available
+                </Badge>
+              </div>
+
+              {loadingFeed ? (
+                <div className="py-20 text-center text-zinc-500 flex flex-col items-center gap-2">
+                  <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
+                  <span className="text-sm">Loading verified internships...</span>
+                </div>
+              ) : internships.length === 0 ? (
+                <div className="py-16 text-center border border-dashed border-zinc-800 rounded-3xl bg-zinc-950/40 p-8 space-y-4 max-w-lg mx-auto">
+                  <Briefcase className="w-12 h-12 text-zinc-600 mx-auto" />
+                  <h3 className="text-lg font-bold text-zinc-200">No matching internships found</h3>
+                  <p className="text-xs text-zinc-500">
+                    Try adjusting your search query or clear the filters. Companies are constantly adding new verified openings!
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setLocationFilter('');
+                      setRoleTypeFilter('');
+                    }}
+                    className="bg-zinc-800 text-zinc-300 text-xs"
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {internships.map((internship) => (
+                    <InternshipCard
+                      key={internship.id}
+                      internship={internship}
+                      onApply={handleApplyClick}
+                      hasApplied={appliedIds.includes(internship.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+
+        {/* ABOUT VIEW */}
+        {activeView === 'about' && (
+          <section className="max-w-4xl mx-auto px-4 py-16 space-y-8">
+            <div className="space-y-3 text-center">
+              <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30">About GRADDIN</Badge>
+              <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
+                Solely Focused On Internships.
+              </h1>
+              <p className="text-zinc-400 text-sm sm:text-base max-w-2xl mx-auto">
+                Unlike generic job boards crowded with senior roles and unrelated listings, GRADDIN is engineered exclusively for students seeking practical internships and companies hiring high-potential talent.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
+              <div className="p-6 rounded-2xl bg-zinc-900/40 border border-zinc-800 space-y-2">
+                <GraduationCap className="w-8 h-8 text-indigo-400" />
+                <h3 className="font-bold text-white text-base">For Students</h3>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Build your text-based profile once. Apply to top opportunities without cumbersome PDF uploads and receive instant AI candidate match evaluations.
                 </p>
               </div>
-            </Link>
-          </div>
+
+              <div className="p-6 rounded-2xl bg-zinc-900/40 border border-zinc-800 space-y-2">
+                <Building2 className="w-8 h-8 text-purple-400" />
+                <h3 className="font-bold text-white text-base">For Companies</h3>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Gain access to verified student talent with applicant ranking powered by AI. Save hours of screening time with automated skill relevance insights.
+                </p>
+              </div>
+
+              <div className="p-6 rounded-2xl bg-zinc-900/40 border border-zinc-800 space-y-2">
+                <ShieldCheck className="w-8 h-8 text-emerald-400" />
+                <h3 className="font-bold text-white text-base">Manual Verification</h3>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Every company on GRADDIN is manually reviewed by admins using verifiable LinkedIn links to ensure students are protected from fake recruiters.
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* FAQ VIEW */}
+        {activeView === 'faq' && (
+          <section className="max-w-3xl mx-auto px-4 py-16 space-y-8">
+            <div className="text-center space-y-2">
+              <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30">Questions & Answers</Badge>
+              <h1 className="text-3xl font-bold text-white">Frequently Asked Questions</h1>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-5 rounded-2xl bg-zinc-900/40 border border-zinc-800 space-y-2">
+                <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                  <HelpCircle className="w-4 h-4 text-indigo-400" />
+                  How does the AI Candidate Ranking work?
+                </h3>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  When you apply to an internship, GRADDIN evaluates your listed skills, education, experience, and optional cover note against the role requirements. It computes an automated match score (0-100%) and provides clear feedback to recruiters so top matches stand out immediately.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-zinc-900/40 border border-zinc-800 space-y-2">
+                <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                  <HelpCircle className="w-4 h-4 text-indigo-400" />
+                  Why do companies need admin verification?
+                </h3>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  To protect students from unverified or spam postings, companies must provide their official LinkedIn page upon registration. GRADDIN admins review the link and approve the account before any internship listing can go live.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-zinc-900/40 border border-zinc-800 space-y-2">
+                <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                  <HelpCircle className="w-4 h-4 text-indigo-400" />
+                  Why are there no resume file uploads?
+                </h3>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  We structured candidate profiles using clean text fields (Skills, Projects, Education) to keep database overhead minimal, preserve your storage limits, and allow direct AI parsing without costly OCR document conversion.
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+      </main>
+
+      {/* FOOTER */}
+      <footer className="border-t border-zinc-800/80 bg-zinc-950 py-8 px-4 sm:px-6 lg:px-8 text-xs text-zinc-500 text-center space-y-2">
+        <div className="flex items-center justify-center gap-2 font-bold text-zinc-300">
+          <Briefcase className="w-4 h-4 text-indigo-400" />
+          <span>GRADDIN — Solely Internships</span>
         </div>
-      </section>
+        <p>© {new Date().getFullYear()} GRADDIN Platform. Engineered for Next.js, Supabase, and Vercel.</p>
+      </footer>
 
-      {/* CURATED OPPORTUNITIES SECTION */}
-      <section className="py-20 bg-[#FAF7F2]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Section Heading & Category Filter Bar */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-            <div>
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#C99A6B] mb-2">
-                <Sparkles className="h-4 w-4" />
-                <span>Featured Openings</span>
-              </div>
-              <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#1C140E]">
-                Explore curated startup internships.
-              </h2>
-              <p className="text-sm text-[#72635A] mt-1">
-                Hand-picked roles with direct founder mentorship, real equity/stipend, and zero resume clutter.
-              </p>
-            </div>
+      {/* MODALS */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        defaultRole={authDefaultRole}
+      />
 
-            {/* Filter Pills */}
-            <div className="flex flex-wrap items-center gap-2 bg-[#EADBCE]/40 p-1.5 rounded-2xl border border-[#DFD5C6]">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                    selectedCategory === cat
-                      ? "bg-[#2C1B14] text-[#FAF7F2] shadow-xs"
-                      : "text-[#72635A] hover:text-[#1C140E] hover:bg-white/60"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredInternships.map((internship) => (
-              <InternshipCard 
-                key={internship.id} 
-                internship={internship}
-                onApply={(i) => setActiveApplyingInternship(i)}
-                featuredHighlight={internship.featured}
-              />
-            ))}
-          </div>
-
-          {/* View All CTA */}
-          <div className="text-center mt-12">
-            <Link href="/internships">
-              <Button variant="outline" size="lg" className="border-[#DFD5C6] px-8 text-sm">
-                <span>View all {internships.length} opportunities</span>
-                <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* PHILOSOPHY & WHY GRADDIN SECTION */}
-      <section id="about" className="py-20 bg-[#F5EFEB] border-t border-[#E8DFD3]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            <div className="lg:col-span-5 space-y-6">
-              <span className="text-xs font-bold uppercase tracking-widest text-[#C99A6B]">
-                THE GRADDIN PHILOSOPHY
-              </span>
-              <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold text-[#1C140E] leading-tight">
-                Not another generic corporate job board.
-              </h2>
-              <p className="text-sm text-[#72635A] leading-relaxed">
-                Traditional platforms force ambitious students through automated resume black holes, while early-stage startup founders drown in irrelevant PDF spam.
-              </p>
-              <p className="text-sm text-[#72635A] leading-relaxed">
-                GRADDIn rethinks discovery from first principles: lightweight text profiles, verified company credentials via LinkedIn, automated AI semantic matching, and high-trust introductions.
-              </p>
-
-              <div className="pt-2 flex flex-col gap-3">
-                <div className="flex items-start gap-3">
-                  <div className="h-6 w-6 rounded-full bg-[#2C1B14] text-white flex items-center justify-center shrink-0 mt-0.5">
-                    <CheckCircle2 className="h-4 w-4 text-amber-200" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-bold text-[#1C140E]">Zero PDF Clutter:</span>
-                    <span className="text-xs text-[#72635A] block">Clean, structured skill &amp; project profiles that recruiters can digest in 15 seconds.</span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="h-6 w-6 rounded-full bg-[#2C1B14] text-white flex items-center justify-center shrink-0 mt-0.5">
-                    <CheckCircle2 className="h-4 w-4 text-amber-200" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-bold text-[#1C140E]">Automated AI Match Scores:</span>
-                    <span className="text-xs text-[#72635A] block">Instant 0-100% competency evaluation and recruiter insight on every application.</span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="h-6 w-6 rounded-full bg-[#2C1B14] text-white flex items-center justify-center shrink-0 mt-0.5">
-                    <CheckCircle2 className="h-4 w-4 text-amber-200" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-bold text-[#1C140E]">LinkedIn Authenticity Verification:</span>
-                    <span className="text-xs text-[#72635A] block">Every startup profile is verified before posting to keep students safe from ghost jobs.</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="rounded-3xl border border-[#DFD5C6] bg-white p-7 shadow-sm">
-                <div className="h-10 w-10 rounded-2xl bg-[#FAF7F2] text-[#2C1B14] flex items-center justify-center mb-4">
-                  <GraduationCap className="h-5 w-5" />
-                </div>
-                <h3 className="font-serif text-xl font-bold text-[#1C140E] mb-2">For Ambitious Students</h3>
-                <p className="text-xs text-[#72635A] leading-relaxed">
-                  Discover breakout startups in AI, robotics, fintech, and design tools before they become household names. Build real features that ship to production.
-                </p>
-              </div>
-
-              <div className="rounded-3xl border border-[#DFD5C6] bg-white p-7 shadow-sm sm:translate-y-6">
-                <div className="h-10 w-10 rounded-2xl bg-[#FAF7F2] text-[#2C1B14] flex items-center justify-center mb-4">
-                  <Building2 className="h-5 w-5" />
-                </div>
-                <h3 className="font-serif text-xl font-bold text-[#1C140E] mb-2">For Early-Stage Founders</h3>
-                <p className="text-xs text-[#72635A] leading-relaxed">
-                  Hire hungry, self-directed student contributors who genuinely want to build alongside you. Review candidates sorted automatically by AI match score.
-                </p>
-              </div>
-
-              <div className="rounded-3xl border border-[#DFD5C6] bg-white p-7 shadow-sm">
-                <div className="h-10 w-10 rounded-2xl bg-[#FAF7F2] text-[#2C1B14] flex items-center justify-center mb-4">
-                  <TrendingUp className="h-5 w-5" />
-                </div>
-                <h3 className="font-serif text-xl font-bold text-[#1C140E] mb-2">Reddit-Style Posting</h3>
-                <p className="text-xs text-[#72635A] leading-relaxed">
-                  Post opportunities in minutes using our clean composer. Tell students what you need in plain, conversational language.
-                </p>
-              </div>
-
-              <div className="rounded-3xl border border-[#DFD5C6] bg-white p-7 shadow-sm sm:translate-y-6">
-                <div className="h-10 w-10 rounded-2xl bg-[#FAF7F2] text-[#2C1B14] flex items-center justify-center mb-4">
-                  <ShieldCheck className="h-5 w-5" />
-                </div>
-                <h3 className="font-serif text-xl font-bold text-[#1C140E] mb-2">Curated &amp; Verified</h3>
-                <p className="text-xs text-[#72635A] leading-relaxed">
-                  Strictly high-impact internships with competitive compensation and transparent expectations.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ SECTION */}
-      <section id="faq" className="py-20 bg-[#FAF7F2] border-t border-[#E8DFD3]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#C99A6B]">FAQ</span>
-            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#1C140E] mt-2">
-              Frequently asked questions.
-            </h2>
-          </div>
-
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-[#E8DFD3] bg-white p-6">
-              <h3 className="font-serif text-lg font-bold text-[#1C140E] mb-2">
-                Why does GRADDIn focus exclusively on internships?
-              </h3>
-              <p className="text-xs text-[#72635A] leading-relaxed">
-                Generic job platforms mix senior executive postings with entry-level listings, leaving students drowning in irrelevant search noise. GRADDIn is dedicated 100% to student internships and upcoming startups.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-[#E8DFD3] bg-white p-6">
-              <h3 className="font-serif text-lg font-bold text-[#1C140E] mb-2">
-                How does the automated AI Match Score work?
-              </h3>
-              <p className="text-xs text-[#72635A] leading-relaxed">
-                When you submit an application, GRADDIn AI computes an instant 0–100% match score comparing your demonstrated skills, project history, and coursework with the role requirements, along with a qualitative recruiter summary note.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-[#E8DFD3] bg-white p-6">
-              <h3 className="font-serif text-lg font-bold text-[#1C140E] mb-2">
-                Why are resumes text-based instead of PDF file uploads?
-              </h3>
-              <p className="text-xs text-[#72635A] leading-relaxed">
-                Text profiles load instantly on mobile, never get butchered by bad ATS parsers, and enable our AI matching engine to rank candidates accurately without database storage overhead.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-[#E8DFD3] bg-white p-6">
-              <h3 className="font-serif text-lg font-bold text-[#1C140E] mb-2">
-                How does startup verification work?
-              </h3>
-              <p className="text-xs text-[#72635A] leading-relaxed">
-                Startups must register with an official LinkedIn company page. Unverified companies are queued for manual admin review before their listings go live.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FINAL EDITORIAL CALLOUT */}
-      <section className="py-20 bg-[#2C1B14] text-[#FAF7F2] text-center">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          <h2 className="font-serif text-3xl sm:text-5xl font-bold tracking-tight text-white leading-tight">
-            The place where ambitious students meet the startups building what comes next.
-          </h2>
-          <p className="text-sm sm:text-base text-[#EADBCE]/80 max-w-xl mx-auto leading-relaxed">
-            Join thousands of students and emerging founders already collaborating on the future.
-          </p>
-          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/signup?role=student" onClick={() => switchRole('student')}>
-              <Button variant="caramel" size="lg" className="w-full sm:w-auto px-8">
-                <span>Explore as Student</span>
-                <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
-            </Link>
-            <Link href="/signup?role=company" onClick={() => switchRole('company')}>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto px-8 text-white border-white/20 hover:bg-white/10 hover:border-white">
-                <span>Post as Startup</span>
-                <ArrowUpRight className="h-4 w-4 ml-1" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Apply Modal */}
       <ApplyModal
-        internship={activeApplyingInternship}
-        open={!!activeApplyingInternship}
-        onOpenChange={(open) => !open && setActiveApplyingInternship(null)}
+        internship={selectedInternshipToApply}
+        isOpen={isApplyOpen}
+        onClose={() => setIsApplyOpen(false)}
+        onSuccess={() => {
+          fetchStudentApplications();
+          setActiveView('student-apps');
+        }}
       />
     </div>
   );
