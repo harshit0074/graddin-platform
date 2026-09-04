@@ -1,203 +1,252 @@
-'use client';
+"use client";
 
 import React, { useState } from 'react';
-import { Internship } from '@/lib/types';
+import confetti from 'canvas-confetti';
+import { Internship, Application } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import {
-  Sparkles,
-  Building2,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  FileCheck,
-  User,
-  BrainCircuit,
+import { 
+  Sparkles, 
+  CheckCircle2, 
+  GraduationCap, 
+  ArrowRight, 
+  Building2, 
+  Briefcase,
+  AlertCircle
 } from 'lucide-react';
+import Link from 'next/link';
 
 interface ApplyModalProps {
   internship: Internship | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export function ApplyModal({ internship, isOpen, onClose, onSuccess }: ApplyModalProps) {
-  const { user } = useAuth();
-  const [coverNote, setCoverNote] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [resultAi, setResultAi] = useState<{ score: number; feedback: string } | null>(null);
+export function ApplyModal({ internship, open, onOpenChange }: ApplyModalProps) {
+  const { user, applyToInternship } = useAuth();
+  const [coverNote, setCoverNote] = useState("");
+  const [whyExcited, setWhyExcited] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedResult, setSubmittedResult] = useState<{
+    application: Application;
+    matchScore: number;
+    aiFeedback: string;
+  } | null>(null);
 
   if (!internship) return null;
 
+  const student = user?.profile;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setLoading(true);
+    setIsSubmitting(true);
 
     try {
-      const res = await fetch('/api/applications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          internship_id: internship.id,
-          cover_note: coverNote,
-        }),
+      const fullCoverNote = [
+        coverNote,
+        whyExcited ? `Why I'm excited: ${whyExcited}` : ""
+      ].filter(Boolean).join("\n\n");
+
+      const result = await applyToInternship(internship.id, fullCoverNote);
+      setSubmittedResult(result);
+
+      // Trigger celebratory confetti
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#2C1B14', '#C99A6B', '#EADBCE', '#E8DCB8']
       });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to submit application.');
-      }
-
-      if (data.ai_result) {
-        setResultAi(data.ai_result);
-      } else {
-        onSuccess();
-        onClose();
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error submitting application');
+    } catch (err) {
+      console.error(err);
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleFinish = () => {
-    setResultAi(null);
-    setCoverNote('');
-    onSuccess();
-    onClose();
+  const handleClose = () => {
+    onOpenChange(false);
+    // Reset state after transition
+    setTimeout(() => {
+      setSubmittedResult(null);
+      setCoverNote("");
+      setWhyExcited("");
+    }, 300);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && (resultAi ? handleFinish() : onClose())}>
-      <DialogContent className="sm:max-w-lg border-zinc-800 bg-zinc-950 text-zinc-100 max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-xs">
-              Application Submission
-            </Badge>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent onClose={handleClose} className="max-w-xl">
+        {!user ? (
+          <div className="py-6 text-center space-y-4">
+            <div className="h-14 w-14 rounded-full bg-amber-50 border border-amber-200 text-amber-900 flex items-center justify-center mx-auto">
+              <GraduationCap className="h-7 w-7 text-[#2C1B14]" />
+            </div>
+            <div>
+              <DialogTitle className="text-2xl font-serif">Sign in to Apply</DialogTitle>
+              <DialogDescription className="mt-2">
+                You need a GRADDIn student account to submit direct applications to {internship.company?.company_name || "startups"}.
+              </DialogDescription>
+            </div>
+            <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link href="/login" className="w-full sm:w-auto">
+                <Button variant="caramel" className="w-full">
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/signup?role=student" className="w-full sm:w-auto">
+                <Button variant="outline" className="w-full border-[#DFD5C6]">
+                  Create Student Account
+                </Button>
+              </Link>
+            </div>
           </div>
-          <DialogTitle className="text-xl font-bold text-zinc-100 pt-1">
-            Apply to {internship.title}
-          </DialogTitle>
-          <DialogDescription className="text-zinc-400 text-xs">
-            at <span className="font-semibold text-zinc-300">{internship.company?.company_name || 'Verified Company'}</span>
-          </DialogDescription>
-        </DialogHeader>
-
-        {error && (
-          <div className="flex items-start gap-2.5 p-3 rounded-lg bg-red-950/50 border border-red-800/60 text-red-300 text-sm">
-            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-red-400" />
-            <span>{error}</span>
+        ) : user.role !== 'student' ? (
+          <div className="py-6 text-center space-y-4">
+            <div className="h-14 w-14 rounded-full bg-amber-50 border border-amber-200 text-amber-900 flex items-center justify-center mx-auto">
+              <AlertCircle className="h-7 w-7 text-[#2C1B14]" />
+            </div>
+            <div>
+              <DialogTitle className="text-2xl font-serif">Student Account Required</DialogTitle>
+              <DialogDescription className="mt-2">
+                You are currently signed in as a <span className="font-semibold capitalize text-[#2C1B14]">{user.role}</span>. Only student accounts can submit internship applications.
+              </DialogDescription>
+            </div>
+            <div className="pt-2">
+              <Button variant="outline" onClick={handleClose} className="border-[#DFD5C6]">
+                Close
+              </Button>
+            </div>
           </div>
-        )}
-
-        {/* IF APPLICATION WAS SUBMITTED AND AI RESULT IS READY */}
-        {resultAi ? (
-          <div className="space-y-4 py-3">
-            <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-950/60 via-purple-950/30 to-zinc-900 border border-indigo-500/30 text-center space-y-3">
-              <div className="w-14 h-14 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 text-indigo-400 flex items-center justify-center mx-auto">
-                <BrainCircuit className="w-8 h-8 text-indigo-400 animate-pulse" />
+        ) : !submittedResult ? (
+          <div>
+            <DialogHeader>
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#8C7A70] uppercase tracking-wider mb-1">
+                <span>Direct Application</span>
+                <span>•</span>
+                <span>{internship.company?.company_name}</span>
               </div>
+              <DialogTitle>Apply for {internship.title}</DialogTitle>
+              <DialogDescription>
+                Your verified GRADDIn student profile will be shared directly with the startup founders. No redundant resume uploads required.
+              </DialogDescription>
+            </DialogHeader>
 
-              <div>
-                <span className="text-xs font-semibold uppercase tracking-wider text-indigo-400">
-                  AI Candidate Evaluation
-                </span>
-                <div className="text-4xl font-black text-white mt-1">
-                  {resultAi.score}% <span className="text-sm font-medium text-zinc-400">Match</span>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Profile Snapshot Preview */}
+              <div className="rounded-2xl border border-[#EADBCE] bg-white p-4">
+                <div className="text-xs font-bold uppercase tracking-wider text-[#2C1B14] mb-2 flex items-center justify-between">
+                  <span>Profile Shared</span>
+                  <Link href="/student/edit-profile" className="text-[11px] text-[#C99A6B] hover:underline font-normal">
+                    Edit profile
+                  </Link>
                 </div>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-[#2C1B14] text-white flex items-center justify-center font-bold text-sm">
+                    {student?.full_name?.[0] || 'S'}
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-[#1C140E]">{student?.full_name || user.email}</div>
+                    <div className="text-xs text-[#72635A]">{student?.education || "Student"}</div>
+                  </div>
+                </div>
+                {student?.skills && (
+                  <div className="flex flex-wrap gap-1 mt-3 pt-3 border-t border-[#F0E8DD]">
+                    {student.skills.split(/[,|]/).slice(0, 5).map((s, i) => (
+                      <span key={i} className="text-[10px] bg-[#FAF7F2] text-[#72635A] px-2 py-0.5 rounded-full border border-[#E8DFD3]">
+                        {s.trim()}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <p className="text-xs text-zinc-300 bg-zinc-900/80 p-3 rounded-xl border border-zinc-800 leading-relaxed text-left">
-                <span className="font-semibold text-indigo-300 block mb-1">AI Feedback to Recruiter:</span>
-                &ldquo;{resultAi.feedback}&rdquo;
+              {/* Startup Specific Question */}
+              <div>
+                <label className="block text-xs font-semibold text-[#1C140E] mb-1.5">
+                  Why are you excited to build with {internship.company?.company_name}?
+                </label>
+                <Textarea
+                  placeholder="Share what caught your eye about our mission or technical product..."
+                  rows={2}
+                  value={whyExcited}
+                  onChange={(e) => setWhyExcited(e.target.value)}
+                />
+              </div>
+
+              {/* Additional Cover Note */}
+              <div>
+                <label className="block text-xs font-semibold text-[#1C140E] mb-1.5">
+                  What would you bring to our team? (Optional)
+                </label>
+                <Textarea
+                  placeholder="Mention any relevant side projects, tools you love, or what you'd like to ship during your internship..."
+                  rows={3}
+                  value={coverNote}
+                  onChange={(e) => setCoverNote(e.target.value)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <Button type="button" variant="ghost" onClick={handleClose}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="default" isLoading={isSubmitting} className="px-6">
+                  <span>Submit Application</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </form>
+          </div>
+        ) : (
+          /* Celebratory Success State with AI Candidate Match Reveal */
+          <div className="text-center py-4 space-y-6">
+            <div className="mx-auto h-16 w-16 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs">
+              <CheckCircle2 className="h-9 w-9" />
+            </div>
+
+            <div>
+              <h2 className="font-serif text-3xl font-bold text-[#1C140E]">Application sent.</h2>
+              <p className="text-sm text-[#72635A] mt-1 max-w-sm mx-auto leading-relaxed">
+                Your application has been received by <span className="font-semibold text-[#1C140E]">{internship.company?.company_name}</span>. Good luck!
               </p>
             </div>
 
-            <p className="text-xs text-zinc-400 text-center">
-              Your application has been submitted to the company. They will review candidates ranked by this match score.
-            </p>
-
-            <Button
-              onClick={handleFinish}
-              className="w-full bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white font-medium"
-            >
-              Done & View My Applications
-            </Button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4 pt-1">
-            {/* PROFILE PREVIEW */}
-            <div className="p-3.5 rounded-xl bg-zinc-900/80 border border-zinc-800/80 space-y-2 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-zinc-300 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-indigo-400" />
-                  Your Profile Snapshot
+            {/* AI Candidate Match Score Revealed */}
+            <div className="rounded-2xl border border-[#C99A6B]/50 bg-gradient-to-b from-white to-[#FAF7F2] p-5 text-left shadow-md">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#2C1B14]">
+                  <Sparkles className="h-4 w-4 text-amber-600" />
+                  <span>Automated AI Match Evaluation</span>
+                </div>
+                <span className="text-sm font-bold text-[#2C1B14] bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300">
+                  {submittedResult.matchScore}% Match
                 </span>
-                <span className="text-[10px] text-zinc-500">Auto-sent with application</span>
               </div>
-              <div className="text-zinc-400 space-y-1">
-                <div>
-                  <strong className="text-zinc-300">Name:</strong> {user?.profile?.full_name || user?.email}
-                </div>
-                <div>
-                  <strong className="text-zinc-300">Skills:</strong> {user?.profile?.skills || 'Not specified'}
-                </div>
-                <div>
-                  <strong className="text-zinc-300">Education:</strong> {user?.profile?.education || 'Not specified'}
-                </div>
+
+              <p className="text-xs text-[#4A382F] leading-relaxed mb-3">
+                &ldquo;{submittedResult.aiFeedback}&rdquo;
+              </p>
+
+              <div className="text-[11px] text-[#8C7A70]">
+                ✓ Application sorted near the top of the startup founder&apos;s candidate inbox.
               </div>
             </div>
 
-            {/* COVER NOTE */}
-            <div className="space-y-1.5">
-              <Label htmlFor="coverNote" className="text-xs font-semibold text-zinc-300">
-                Why are you a great fit for this role? (Optional Cover Note)
-              </Label>
-              <Textarea
-                id="coverNote"
-                rows={4}
-                placeholder="Highlight your relevant projects, excitement, and availability..."
-                value={coverNote}
-                onChange={(e) => setCoverNote(e.target.value)}
-                className="bg-zinc-900 border-zinc-800 text-zinc-100 text-xs focus-visible:ring-indigo-500"
-              />
-            </div>
-
-            {/* AI NOTICE */}
-            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-indigo-950/30 border border-indigo-500/20 text-indigo-300 text-xs">
-              <Sparkles className="w-4 h-4 shrink-0 text-indigo-400" />
-              <span>Graddin AI will instantly evaluate your profile against the role requirements.</span>
-            </div>
-
-            <DialogFooter className="pt-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={onClose}
-                disabled={loading}
-                className="text-zinc-400 hover:text-white"
-              >
-                Cancel
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Link href="/student/applications" className="flex-1" onClick={handleClose}>
+                <Button variant="default" className="w-full">
+                  View My Applications
+                </Button>
+              </Link>
+              <Button variant="outline" className="flex-1" onClick={handleClose}>
+                Browse More Opportunities
               </Button>
-              <Button
-                type="submit"
-                disabled={loading}
-                className="bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white font-medium"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FileCheck className="w-4 h-4 mr-2" />}
-                Submit Application
-              </Button>
-            </DialogFooter>
-          </form>
+            </div>
+          </div>
         )}
       </DialogContent>
     </Dialog>

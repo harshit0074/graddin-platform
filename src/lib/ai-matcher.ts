@@ -101,3 +101,30 @@ export function calculateCandidateMatch(input: MatchInput): MatchResult {
     feedback,
   };
 }
+
+export function calculateAIMatch(
+  student?: Partial<MatchInput['student']>,
+  internship?: Partial<MatchInput['internship']>
+): { score: number; feedback: string; matchedSkills: string[]; growthAreas: string[] } {
+  const res = calculateCandidateMatch({
+    student: {
+      skills: student?.skills || '',
+      education: student?.education || '',
+      experience: student?.experience || '',
+      coverNote: student?.coverNote || '',
+    },
+    internship: {
+      title: internship?.title || '',
+      description: internship?.description || '',
+      requirements: internship?.requirements || '',
+      role_type: internship?.role_type || '',
+    },
+  });
+
+  return {
+    score: res.score,
+    feedback: res.feedback,
+    matchedSkills: ['Core Competencies'],
+    growthAreas: ['Production Best Practices'],
+  };
+}

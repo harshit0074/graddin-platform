@@ -1,232 +1,447 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React, { useState } from 'react';
+import { usePathname } from 'next/navigation';
+import NextLink from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Briefcase,
-  User,
-  Building2,
-  ShieldAlert,
+import { 
+  Menu, 
+  X, 
+  Building2, 
+  GraduationCap, 
+  ShieldCheck, 
+  Plus, 
+  ArrowUpRight, 
   LogOut,
-  Sparkles,
-  LayoutDashboard,
-  FileText,
-  CheckCircle2,
-  Clock,
+  SlidersHorizontal,
+  Crown
 } from 'lucide-react';
+import { isSuperAdminEmail } from '@/lib/constants';
 
-interface NavbarProps {
-  onOpenAuth: (role?: 'student' | 'company') => void;
-  activeView: 'feed' | 'student-apps' | 'student-profile' | 'company-dash' | 'admin-dash' | 'faq' | 'about';
-  setActiveView: (view: 'feed' | 'student-apps' | 'student-profile' | 'company-dash' | 'admin-dash' | 'faq' | 'about') => void;
-}
+export function Navbar() {
+  const { user, role, logout } = useAuth();
+  const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
-export function Navbar({ onOpenAuth, activeView, setActiveView }: NavbarProps) {
-  const { user, logout } = useAuth();
+  const isGodModeAdmin = (user?.email && isSuperAdminEmail(user.email)) || role === 'admin' || user?.role === 'admin';
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* LOGO */}
-        <div className="flex items-center gap-6">
-          <button
-            onClick={() => setActiveView('feed')}
-            className="flex items-center gap-2 group text-left"
-          >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-violet-600 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-              <Briefcase className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <span className="text-xl font-black tracking-tight text-white flex items-center gap-1.5">
-                GRADDIN
-                <span className="text-[10px] font-bold tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 uppercase">
-                  Internships
-                </span>
-              </span>
-            </div>
-          </button>
+    <header className="sticky top-0 z-40 w-full border-b border-[#E8DFD3] bg-[#FAF7F2]/90 backdrop-blur-md transition-all">
+      <div className="max-w-7xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+        {/* Brand Logo */}
+        <NextLink href="/" className="flex items-center gap-2 group">
+          <div className="h-9 w-9 rounded-xl bg-[#2C1B14] text-[#FAF7F2] flex items-center justify-center font-serif text-xl font-bold shadow-xs transition-transform group-hover:scale-105">
+            G
+          </div>
+          <div className="flex flex-col">
+            <span className="font-serif text-2xl font-bold tracking-tight text-[#1C140E]">
+              GRADD<span className="text-[#C99A6B]">In</span>
+            </span>
+            <span className="text-[9px] uppercase tracking-widest text-[#72635A] -mt-1 font-semibold">
+              Internships
+            </span>
+          </div>
+        </NextLink>
 
-          {/* DESKTOP NAV LINKS */}
-          <nav className="hidden md:flex items-center gap-1 text-sm font-medium">
-            <button
-              onClick={() => setActiveView('feed')}
-              className={`px-3 py-1.5 rounded-lg transition-colors ${
-                activeView === 'feed'
-                  ? 'bg-zinc-800 text-white'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60'
-              }`}
-            >
-              Browse Roles
-            </button>
-            <button
-              onClick={() => setActiveView('about')}
-              className={`px-3 py-1.5 rounded-lg transition-colors ${
-                activeView === 'about'
-                  ? 'bg-zinc-800 text-white'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60'
-              }`}
-            >
-              About
-            </button>
-            <button
-              onClick={() => setActiveView('faq')}
-              className={`px-3 py-1.5 rounded-lg transition-colors ${
-                activeView === 'faq'
-                  ? 'bg-zinc-800 text-white'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60'
-              }`}
-            >
-              FAQ
-            </button>
-          </nav>
-        </div>
+        {/* Desktop Navigation Links */}
+        <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-[#72635A]">
+          {/* Public Links */}
+          {role === 'guest' && (
+            <>
+              <NextLink 
+                href="/internships" 
+                className={`transition-colors hover:text-[#1C140E] ${pathname === '/internships' ? 'text-[#1C140E] font-semibold' : ''}`}
+              >
+                Internships
+              </NextLink>
+              <NextLink href="/#about" className="transition-colors hover:text-[#1C140E]">
+                About us
+              </NextLink>
+              <NextLink href="/#faq" className="transition-colors hover:text-[#1C140E]">
+                FAQ
+              </NextLink>
+            </>
+          )}
 
-        {/* RIGHT ACTIONS */}
-        <div className="flex items-center gap-3">
-          {!user ? (
+          {/* Student Links */}
+          {role === 'student' && (
+            <>
+              <NextLink 
+                href="/internships" 
+                className={`transition-colors hover:text-[#1C140E] ${pathname === '/internships' ? 'text-[#1C140E] font-semibold' : ''}`}
+              >
+                Opportunities
+              </NextLink>
+              <NextLink 
+                href="/student/applications" 
+                className={`transition-colors hover:text-[#1C140E] ${pathname === '/student/applications' ? 'text-[#1C140E] font-semibold' : ''}`}
+              >
+                My Applications
+              </NextLink>
+              <NextLink 
+                href="/student/profile" 
+                className={`transition-colors hover:text-[#1C140E] ${pathname === '/student/profile' ? 'text-[#1C140E] font-semibold' : ''}`}
+              >
+                Profile
+              </NextLink>
+            </>
+          )}
+
+          {/* Company Links */}
+          {role === 'company' && (
+            <>
+              <NextLink 
+                href="/company/dashboard" 
+                className={`transition-colors hover:text-[#1C140E] ${pathname === '/company/dashboard' ? 'text-[#1C140E] font-semibold' : ''}`}
+              >
+                Dashboard
+              </NextLink>
+              <NextLink 
+                href="/company/opportunities" 
+                className={`transition-colors hover:text-[#1C140E] ${pathname === '/company/opportunities' ? 'text-[#1C140E] font-semibold' : ''}`}
+              >
+                My Posts
+              </NextLink>
+              <NextLink 
+                href="/company/candidates" 
+                className={`transition-colors hover:text-[#1C140E] ${pathname === '/company/candidates' ? 'text-[#1C140E] font-semibold' : ''}`}
+              >
+                Candidates (AI Ranked)
+              </NextLink>
+              <NextLink 
+                href="/company/profile" 
+                className={`transition-colors hover:text-[#1C140E] ${pathname === '/company/profile' ? 'text-[#1C140E] font-semibold' : ''}`}
+              >
+                Startup Page
+              </NextLink>
+            </>
+          )}
+
+          {/* Admin Links */}
+          {role === 'admin' && (
+            <>
+              <NextLink 
+                href="/admin" 
+                className={`flex items-center gap-1.5 text-[#2C1B14] font-semibold px-3 py-1 rounded-full bg-amber-100 border border-amber-200`}
+              >
+                <ShieldCheck className="h-4 w-4 text-amber-700" />
+                <span>God-Mode Portal</span>
+              </NextLink>
+              <NextLink href="/internships" className="transition-colors hover:text-[#1C140E]">
+                All Openings
+              </NextLink>
+            </>
+          )}
+        </nav>
+
+        {/* Right Actions Header */}
+        <div className="hidden md:flex items-center gap-3">
+          {/* Guest Actions */}
+          {role === 'guest' && (
+            <>
+              <NextLink href="/signup?role=company">
+                <Button variant="ghost" size="sm" className="text-[#72635A] hover:text-[#1C140E]">
+                  For Startups
+                </Button>
+              </NextLink>
+              <NextLink href="/login">
+                <Button variant="outline" size="sm">
+                  Log in
+                </Button>
+              </NextLink>
+              <NextLink href="/signup">
+                <Button variant="default" size="sm" className="group">
+                  <span>Join GRADDIn</span>
+                  <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </Button>
+              </NextLink>
+            </>
+          )}
+
+          {/* Student Actions */}
+          {role === 'student' && (
             <div className="flex items-center gap-2">
+              <NextLink href="/internships">
+                <Button variant="outline" size="sm">
+                  Browse Opportunities
+                </Button>
+              </NextLink>
+              <div className="relative">
+                <button
+                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  className="flex items-center gap-2 pl-2 focus:outline-none"
+                >
+                  <div className="h-9 w-9 rounded-full bg-[#2C1B14] text-white flex items-center justify-center font-bold text-xs border border-[#DFD5C6] shadow-2xs hover:scale-105 transition-transform">
+                    {user?.profile?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'S'}
+                  </div>
+                </button>
+                {userDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-white border border-[#DFD5C6] shadow-lg p-2 z-50 animate-in fade-in">
+                    <div className="px-3 py-2 border-b border-[#EADBCE]/50">
+                      <div className="text-xs font-semibold text-[#1C140E] truncate">{user?.profile?.full_name || 'Student'}</div>
+                      <div className="text-[10px] text-[#72635A] truncate">{user?.email}</div>
+                    </div>
+                    <NextLink
+                      href="/student/profile"
+                      onClick={() => setUserDropdownOpen(false)}
+                      className="block px-3 py-2 text-xs font-medium text-[#1C140E] hover:bg-[#FAF7F2] rounded-xl"
+                    >
+                      View Profile
+                    </NextLink>
+                    <NextLink
+                      href="/student/applications"
+                      onClick={() => setUserDropdownOpen(false)}
+                      className="block px-3 py-2 text-xs font-medium text-[#1C140E] hover:bg-[#FAF7F2] rounded-xl"
+                    >
+                      My Applications
+                    </NextLink>
+                    <button
+                      onClick={() => {
+                        setUserDropdownOpen(false);
+                        logout();
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      <span>Sign out</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Company Actions */}
+          {role === 'company' && (
+            <div className="flex items-center gap-2">
+              <NextLink href="/company/post">
+                <Button variant="default" size="sm" className="gap-1.5">
+                  <Plus className="h-4 w-4" />
+                  <span>Post an Opportunity</span>
+                </Button>
+              </NextLink>
+              <div className="relative">
+                <button
+                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  className="flex items-center gap-2 pl-2 focus:outline-none"
+                >
+                  <div className="h-9 w-9 rounded-xl bg-[#2C1B14] text-white flex items-center justify-center text-xs font-bold shadow-2xs hover:scale-105 transition-transform">
+                    {user?.company?.company_name?.[0]?.toUpperCase() || 'C'}
+                  </div>
+                </button>
+                {userDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-white border border-[#DFD5C6] shadow-lg p-2 z-50 animate-in fade-in">
+                    <div className="px-3 py-2 border-b border-[#EADBCE]/50">
+                      <div className="text-xs font-semibold text-[#1C140E] truncate">{user?.company?.company_name || 'Startup'}</div>
+                      <div className="text-[10px] text-[#72635A] truncate">{user?.email}</div>
+                    </div>
+                    <NextLink
+                      href="/company/dashboard"
+                      onClick={() => setUserDropdownOpen(false)}
+                      className="block px-3 py-2 text-xs font-medium text-[#1C140E] hover:bg-[#FAF7F2] rounded-xl"
+                    >
+                      Dashboard
+                    </NextLink>
+                    <NextLink
+                      href="/company/profile"
+                      onClick={() => setUserDropdownOpen(false)}
+                      className="block px-3 py-2 text-xs font-medium text-[#1C140E] hover:bg-[#FAF7F2] rounded-xl"
+                    >
+                      Company Profile
+                    </NextLink>
+                    <button
+                      onClick={() => {
+                        setUserDropdownOpen(false);
+                        logout();
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      <span>Sign out</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Admin Actions */}
+          {role === 'admin' && (
+            <div className="flex items-center gap-2">
+              <NextLink href="/admin">
+                <Button variant="default" size="sm" className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Admin God Mode</span>
+                </Button>
+              </NextLink>
               <Button
                 variant="ghost"
-                onClick={() => onOpenAuth('company')}
-                className="text-zinc-300 hover:text-white hover:bg-zinc-900 text-xs sm:text-sm font-medium hidden sm:inline-flex"
+                size="sm"
+                onClick={logout}
+                className="text-red-600 hover:bg-red-50 hover:text-red-700 text-xs flex items-center gap-1.5"
               >
-                For Companies
+                <LogOut className="h-3.5 w-3.5" />
+                <span>Sign out</span>
               </Button>
-              <Button
-                onClick={() => onOpenAuth('student')}
-                className="bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white text-xs sm:text-sm font-medium shadow-md shadow-indigo-500/20 rounded-lg"
-              >
-                Sign In / Join
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              {/* STUDENT ROLE SHORTCUTS */}
-              {user.role === 'student' && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant={activeView === 'student-apps' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setActiveView('student-apps')}
-                    className={`text-xs h-9 ${
-                      activeView === 'student-apps'
-                        ? 'bg-indigo-600 text-white'
-                        : 'border-zinc-800 text-zinc-300 hover:bg-zinc-900'
-                    }`}
-                  >
-                    <FileText className="w-3.5 h-3.5 mr-1.5" />
-                    My Applications
-                  </Button>
-                </div>
-              )}
-
-              {/* COMPANY ROLE SHORTCUTS */}
-              {user.role === 'company' && (
-                <div className="flex items-center gap-2">
-                  {user.company?.is_verified ? (
-                    <Badge className="bg-emerald-950/60 text-emerald-400 border border-emerald-800/80 gap-1 text-[11px] hidden sm:flex">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                      Verified Company
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-amber-950/60 text-amber-400 border border-amber-800/80 gap-1 text-[11px] hidden sm:flex">
-                      <Clock className="w-3 h-3 text-amber-400" />
-                      Verification Pending
-                    </Badge>
-                  )}
-                  <Button
-                    variant={activeView === 'company-dash' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setActiveView('company-dash')}
-                    className={`text-xs h-9 ${
-                      activeView === 'company-dash'
-                        ? 'bg-indigo-600 text-white'
-                        : 'border-zinc-800 text-zinc-300 hover:bg-zinc-900'
-                    }`}
-                  >
-                    <LayoutDashboard className="w-3.5 h-3.5 mr-1.5" />
-                    Company Dashboard
-                  </Button>
-                </div>
-              )}
-
-              {/* ADMIN ROLE SHORTCUTS (HIDDEN / GOD MODE) */}
-              {user.role === 'admin' && (
-                <Button
-                  size="sm"
-                  onClick={() => setActiveView('admin-dash')}
-                  className="bg-gradient-to-r from-red-600 via-purple-600 to-indigo-600 hover:opacity-90 text-white text-xs font-semibold shadow-lg shadow-purple-900/30 border border-red-400/30 h-9"
-                >
-                  <ShieldAlert className="w-3.5 h-3.5 mr-1.5" />
-                  ⚡ Admin God Mode
-                </Button>
-              )}
-
-              {/* USER PROFILE DROPDOWN */}
-              <DropdownMenu>
-                <DropdownMenuTrigger className="flex items-center gap-2 p-1.5 rounded-full hover:bg-zinc-900 border border-zinc-800 transition-colors outline-none cursor-pointer">
-                  <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-200 font-bold text-xs border border-zinc-700">
-                    {user.role === 'company'
-                      ? (user.company?.company_name?.[0] || 'C').toUpperCase()
-                      : (user.profile?.full_name?.[0] || user.email?.[0] || 'U').toUpperCase()}
-                  </div>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-zinc-950 border-zinc-800 text-zinc-200">
-                  <DropdownMenuLabel>
-                    <div className="text-xs text-zinc-400">Signed in as</div>
-                    <div className="font-semibold text-sm truncate text-zinc-100">{user.email}</div>
-                    <div className="mt-1">
-                      <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-indigo-400 border border-zinc-700">
-                        {user.role}
-                      </span>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator className="bg-zinc-800" />
-                  {user.role === 'student' && (
-                    <>
-                      <DropdownMenuItem onClick={() => setActiveView('student-apps')} className="cursor-pointer">
-                        <FileText className="w-4 h-4 mr-2 text-zinc-400" />
-                        My Applications
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setActiveView('student-profile')} className="cursor-pointer">
-                        <User className="w-4 h-4 mr-2 text-zinc-400" />
-                        Edit Profile / Resume Info
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                  {user.role === 'company' && (
-                    <DropdownMenuItem onClick={() => setActiveView('company-dash')} className="cursor-pointer">
-                      <Building2 className="w-4 h-4 mr-2 text-zinc-400" />
-                      Company Dashboard
-                    </DropdownMenuItem>
-                  )}
-                  {user.role === 'admin' && (
-                    <DropdownMenuItem onClick={() => setActiveView('admin-dash')} className="cursor-pointer text-purple-400">
-                      <ShieldAlert className="w-4 h-4 mr-2 text-purple-400" />
-                      Admin Control Panel
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator className="bg-zinc-800" />
-                  <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-400 hover:text-red-300">
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           )}
         </div>
+
+        {/* Mobile menu hamburger */}
+        <div className="flex md:hidden items-center gap-2">
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 rounded-xl text-[#1C140E] hover:bg-[#EADBCE]/50 transition-colors"
+          >
+            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
       </div>
+
+      {/* Mobile Drawer Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-b border-[#E8DFD3] bg-[#FAF7F2] px-4 pt-2 pb-6 space-y-4 animate-in slide-in-from-top-3">
+          <div className="flex flex-col space-y-2 pt-2">
+            {role === 'guest' && (
+              <>
+                <NextLink 
+                  href="/internships" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 text-base font-medium text-[#1C140E] rounded-xl hover:bg-[#EADBCE]/40"
+                >
+                  Internships
+                </NextLink>
+                <NextLink 
+                  href="/#about" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 text-base font-medium text-[#72635A] rounded-xl hover:bg-[#EADBCE]/40"
+                >
+                  About us
+                </NextLink>
+                <NextLink 
+                  href="/#faq" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 text-base font-medium text-[#72635A] rounded-xl hover:bg-[#EADBCE]/40"
+                >
+                  FAQ
+                </NextLink>
+                <div className="pt-3 flex flex-col gap-2">
+                  <NextLink href="/login" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="outline" className="w-full">Log in</Button>
+                  </NextLink>
+                  <NextLink href="/signup" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="default" className="w-full">Join GRADDIn ↗</Button>
+                  </NextLink>
+                </div>
+              </>
+            )}
+
+            {role === 'student' && (
+              <>
+                <NextLink 
+                  href="/internships" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 text-base font-medium text-[#1C140E] rounded-xl hover:bg-[#EADBCE]/40"
+                >
+                  Browse Opportunities
+                </NextLink>
+                <NextLink 
+                  href="/student/applications" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 text-base font-medium text-[#72635A] rounded-xl hover:bg-[#EADBCE]/40"
+                >
+                  My Applications
+                </NextLink>
+                <NextLink 
+                  href="/student/profile" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 text-base font-medium text-[#72635A] rounded-xl hover:bg-[#EADBCE]/40"
+                >
+                  Profile
+                </NextLink>
+                <button 
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    logout();
+                  }}
+                  className="text-left px-3 py-2 text-base font-medium text-red-600 rounded-xl hover:bg-red-50 flex items-center gap-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Sign out</span>
+                </button>
+              </>
+            )}
+
+            {role === 'company' && (
+              <>
+                <NextLink 
+                  href="/company/dashboard" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 text-base font-medium text-[#1C140E] rounded-xl hover:bg-[#EADBCE]/40"
+                >
+                  Startup Dashboard
+                </NextLink>
+                <NextLink 
+                  href="/company/post" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 text-base font-medium text-[#1C140E] rounded-xl hover:bg-[#EADBCE]/40"
+                >
+                  Post an Opportunity
+                </NextLink>
+                <NextLink 
+                  href="/company/opportunities" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 text-base font-medium text-[#72635A] rounded-xl hover:bg-[#EADBCE]/40"
+                >
+                  My Posts
+                </NextLink>
+                <NextLink 
+                  href="/company/profile" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 text-base font-medium text-[#72635A] rounded-xl hover:bg-[#EADBCE]/40"
+                >
+                  Company Profile
+                </NextLink>
+                <button 
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    logout();
+                  }}
+                  className="text-left px-3 py-2 text-base font-medium text-red-600 rounded-xl hover:bg-red-50 flex items-center gap-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Sign out</span>
+                </button>
+              </>
+            )}
+
+            {role === 'admin' && (
+              <>
+                <NextLink 
+                  href="/admin" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 text-base font-medium text-amber-900 bg-amber-100 rounded-xl flex items-center gap-2"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Admin God-Mode Panel</span>
+                </NextLink>
+                <button 
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    logout();
+                  }}
+                  className="text-left px-3 py-2 text-base font-medium text-red-600 rounded-xl hover:bg-red-50 flex items-center gap-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Sign out</span>
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }
